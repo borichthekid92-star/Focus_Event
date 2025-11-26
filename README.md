@@ -6,7 +6,8 @@ Enterprise-grade endpoint detection and response (EDR) system with real-time pro
 
 ---
 
-to run agent either run Even_Loader.exe or python3 secmon.py
+to run agent either run Event_Loader.exe or python3 secmon.py
+---
 to run web app python start.py 
 
 ## Table of Contents
