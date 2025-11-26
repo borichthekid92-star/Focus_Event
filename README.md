@@ -2,7 +2,7 @@
 
 Enterprise-grade endpoint detection and response (EDR) system with real-time process monitoring, command execution capture via Windows Event Tracing (ETW), network tracking, file monitoring, and Flask-based web dashboard for centralized log aggregation and forensic analysis.
 
-**Status**: Production Ready | **Latest**: v1.0 (Nov 26, 2025)
+**Status**: Production Ready | **Latest**: v1.0 (Nov 26, 2025) DELETE AGENT_ID.txt file
 
 ---
 
