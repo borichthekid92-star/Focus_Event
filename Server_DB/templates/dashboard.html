@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FOCUS Event Monitoring Dashboard - Advanced</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #000;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        .top-bar {
+            background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+            border-bottom: 2px solid #00d4ff;
+            padding: 15px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .logo-section { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+        }
+        .falcon-logo { 
+            font-size: 32px; 
+            color: #00d4ff; 
+        }
+        .logo-text { 
+            font-size: 24px; 
+            font-weight: 700; 
+            color: white; 
+        }
+        .logo-subtitle { 
+            font-size: 11px; 
+            color: #00d4ff; 
+            text-transform: uppercase; 
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            border-radius: 20px;
+        }
+
+        .status-dot {
+            width: 10px; 
+            height: 10px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse { 
+            0%,100%{opacity:1;} 
+            50%{opacity:0.4;} 
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+
+        .btn-logout {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: #5568d3;
+        }
+
+        .btn-alerts {
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+            color: white;
+            border: 2px solid #ff4444;
+            padding: 10px 18px;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .btn-alerts:hover {
+            background: linear-gradient(135deg, #ff6666, #ff0000);
+            border-color: #ff0000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4);
+        }
+
+        .nav-btn {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-btn:hover {
+            background: #00d4ff;
+            color: #000;
+            transform: translateY(-2px);
+        }
+
+        .container { 
+            padding: 30px; 
+            max-width: 1800px; 
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .dashboard-title { 
+            font-size: 32px; 
+            font-weight: 700; 
+            color: white; 
+            margin-bottom: 5px; 
+        }
+        .dashboard-subtitle { 
+            color: #888; 
+            font-size: 16px; 
+            margin-bottom: 25px; 
+        }
+
+        /* Analytics Dashboard Grid */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+            border: 1px solid #00d4ff;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .metric-label {
+            color: #888;
+            font-size: 13px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            color: #00d4ff;
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .metric-trend {
+            color: #00ff88;
+            font-size: 12px;
+        }
+
+        /* Charts Section */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .chart-title {
+            color: #00d4ff;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+            font-size: 16px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        /* Advanced Search Section */
+        .search-section {
+            background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .search-title {
+            color: #00d4ff;
+            font-weight: 700;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+        }
+
+        .search-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            background: #000;
+            color: #00d4ff;
+            border: 1px solid #00d4ff;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+
+        .search-btn {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s;
+        }
+
+        .search-btn:hover {
+            background: #00bfff;
+        }
+
+        .search-info {
+            color: #888;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .regex-help {
+            display: inline-block;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-top: 10px;
+            color: #e0e0e0;
+        }
+
+        /* Events Table */
+        .events-container {
+            background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        #events_wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+        
+        table.dataTable {
+            width: 100%;
+        }
+        
+        table.dataTable thead th {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+            font-weight: 700;
+            padding: 14px 8px;
+            border-bottom: 2px solid #00d4ff;
+            font-size: 14px;
+        }
+        
+        table.dataTable tbody td {
+            font-size: 15px;
+            color: #e6e6e6;
+            padding: 15px 8px;
+            vertical-align: top;
+        }
+        
+        #events tbody tr {
+            border-bottom: 1px solid #333;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        #events tbody tr:hover {
+            background-color: rgba(0,212,255,0.1);
+        }
+
+        #events tbody td {
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            word-break: break-word !important;
+        }
+
+        /* Details column with text wrapping */
+        #events tbody td:nth-child(4) {
+            white-space: normal !important;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .dataTables_wrapper {
+            color: #00d4ff;
+        }
+
+        .dataTables_wrapper .dataTables_filter input {
+            background: #000;
+            color: #00d4ff;
+            border: 1px solid #00d4ff;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            background: rgba(0, 212, 255, 0.1);
+            color: #00d4ff;
+            border: 1px solid #00d4ff;
+            border-radius: 5px;
+            margin: 0 5px;
+            padding: 8px 12px;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button.active {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+            margin: 5% auto;
+            padding: 0;
+            border: 2px solid #00d4ff;
+            width: 80%;
+            max-width: 900px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3);
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-header {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 20px;
+            border-bottom: 1px solid #00d4ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .modal-header h2 {
+            color: #00d4ff;
+            font-size: 22px;
+            margin: 0;
+        }
+
+        .close-btn {
+            color: #888;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s;
+            line-height: 20px;
+            background: none;
+            border: none;
+        }
+
+        .close-btn:hover {
+            color: #ff4444;
+        }
+
+        .modal-body {
+            padding: 25px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .event-detail-grid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .detail-label {
+            color: #00d4ff;
+            font-weight: 700;
+            padding: 8px 15px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 4px;
+            border-left: 3px solid #00d4ff;
+            min-width: 150px;
+        }
+
+        .detail-value {
+            color: #e0e0e0;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            white-space: pre-wrap !important;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #333;
+        }
+
+        .event-badge {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .endpoint-badge {
+            background: rgba(0, 212, 255, 0.15);
+            color: #00bfff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .refresh-btn {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .refresh-btn:hover {
+            background: #00bfff;
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .last-updated {
+            color: #888;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .filters-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid #00d4ff;
+            color: #00d4ff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .filter-chip:hover {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        .filter-chip.active {
+            background: #00d4ff;
+            color: #000;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .search-inputs {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <div class="logo-section">
+            <i class="fas fa-shield-alt falcon-logo"></i>
+            <div>
+                <div class="logo-text">FOCUS Event Monitoring</div>
+                <div class="logo-subtitle">Advanced Analytics Dashboard</div>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+            <div class="status-indicator">
+                <div class="status-dot"></div>
+                <span class="status-text">Server Active</span>
+            </div>
+            <div style="display:flex;gap:10px;">
+                <a href="/alerts" class="btn-alerts" title="Active Alerts">
+                    <i class="fas fa-exclamation-circle"></i> ALERTS
+                </a>
+                <a href="/rules" class="nav-btn" title="Rules Dashboard">
+                    <i class="fas fa-shield-alt"></i> Rules
+                </a>
+                <a href="/remote_exec" class="nav-btn" title="Endpoint Dashboard">
+                    <i class="fas fa-terminal"></i> Endpoints
+                </a>
+            </div>
+            <div class="user-info">
+                <span>User: <strong>{{ username }}</strong></span>
+                <a href="/logout" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <div class="dashboard-title"><i class="fas fa-chart-line"></i> Security Events Analytics</div>
+            <div class="dashboard-subtitle">Real-time endpoint monitoring, threat detection, and advanced search</div>
+        </div>
+
+        <!-- Metrics Dashboard -->
+        <div class="analytics-grid">
+            <div class="metric-card" style="border: 2px solid #ff4444; background: linear-gradient(135deg, #1a0a0a, #2a0a0a);">
+                <div class="metric-label" style="color: #ff4444;">🚨 ACTIVE ALERTS</div>
+                <div class="metric-value" id="activeAlerts" style="color: #ff4444;">0</div>
+                <a href="/alerts" class="btn-alerts" style="width: 100%; text-align: center; margin-top: 10px; padding: 8px 12px;">
+                    <i class="fas fa-arrow-right"></i> View Dashboard
+                </a>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Total Events</div>
+                <div class="metric-value" id="totalEvents">0</div>
+                <div class="metric-trend">Last 24 hours</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Active Endpoints</div>
+                <div class="metric-value" id="activeEndpoints">0</div>
+                <div class="metric-trend">Connected</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Event Types</div>
+                <div class="metric-value" id="eventTypes">0</div>
+                <div class="metric-trend">Unique</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Refresh Rate</div>
+                <div class="metric-value" id="refreshRate">10s</div>
+                <div class="metric-trend">Auto-refresh</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title"><i class="fas fa-pie-chart"></i> Event Types Distribution</div>
+                <div class="chart-wrapper">
+                    <canvas id="eventTypeChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title"><i class="fas fa-bar-chart"></i> Top 10 Endpoints</div>
+                <div class="chart-wrapper">
+                    <canvas id="endpointChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title"><i class="fas fa-area-chart"></i> Events Over Time</div>
+                <div class="chart-wrapper">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Search Section -->
+        <div class="search-section">
+            <div class="search-title">
+                <i class="fas fa-search"></i> Advanced Regex Search
+            </div>
+            <div class="search-inputs">
+                <input type="text" id="regexPattern" class="search-input" placeholder="Enter regex pattern (e.g., ^cmd|powershell)" title="JavaScript RegExp syntax">
+                <select id="searchField" class="search-input">
+                    <option value="details">Search in Details</option>
+                    <option value="event_type">Search in Event Type</option>
+                    <option value="endpoint_id">Search in Endpoint ID</option>
+                    <option value="all">Search in All Fields</option>
+                </select>
+                <button class="search-btn" onclick="performRegexSearch()">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+            <div class="search-info" id="searchInfo"></div>
+            <div class="regex-help">
+                <strong>Regex Tips:</strong> Use ^ for start, $ for end, | for OR, . for any char, * for repeat, [] for char class
+                <br>Examples: <code>cmd.exe</code>, <code>^(cmd|powershell)</code>, <code>C:\\\\(Windows|System)</code>
+            </div>
+        </div>
+
+        <!-- Process Percentage Statistics -->
+        <div class="search-section">
+            <div class="search-title">
+                <i class="fas fa-chart-pie"></i> Process Statistics & Percentage
+            </div>
+            <div class="search-inputs">
+                <input type="text" id="processSearch" class="search-input" placeholder="Enter process name (e.g., cmd.exe, powershell.exe)" title="Exact or partial process name">
+                <select id="timeRangeFilter" class="search-input">
+                    <option value="current">Current Filter</option>
+                    <option value="all">All Time</option>
+                </select>
+                <button class="search-btn" onclick="calculateProcessPercentage()">
+                    <i class="fas fa-percent"></i> Calculate
+                </button>
+            </div>
+            <div id="percentageResult" style="margin-top: 15px; display: none;">
+                <div style="background: rgba(0, 212, 255, 0.1); border: 1px solid #00d4ff; padding: 15px; border-radius: 5px;">
+                    <div style="color: #00d4ff; font-weight: 700; margin-bottom: 10px;">
+                        <i class="fas fa-check-circle"></i> Process Statistics
+                    </div>
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 15px; color: #e0e0e0;">
+                        <div style="color: #888;">Process Name:</div>
+                        <div id="procName" style="font-family: 'Courier New', monospace; word-break: break-all;"></div>
+                        
+                        <div style="color: #888;">Times Seen:</div>
+                        <div id="procCount" style="font-weight: 700; color: #00ff88;"></div>
+                        
+                        <div style="color: #888;">Total Events:</div>
+                        <div id="totalCount"></div>
+                        
+                        <div style="color: #888;">Percentage:</div>
+                        <div id="procPercentage" style="font-weight: 700; color: #00ff88; font-size: 18px;"></div>
+                        
+                        <div style="color: #888;">Frequency:</div>
+                        <div id="procFrequency"></div>
+                    </div>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+                        <button class="search-btn" onclick="filterByProcess()" style="width: 100%;">
+                            <i class="fas fa-filter"></i> Filter Table by Process
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Time Filters -->
+        <div class="filters-section">
+            <span style="color: #888; font-size: 12px; align-self: center;">Filter by Time:</span>
+            <div class="filter-chip active" onclick="setTimeFilter(1)">Last 1 Hour</div>
+            <div class="filter-chip" onclick="setTimeFilter(4)">Last 4 Hours</div>
+            <div class="filter-chip" onclick="setTimeFilter(24)">Last 24 Hours</div>
+            <div class="filter-chip" onclick="setTimeFilter(null)">All Events</div>
+        </div>
+
+        <button class="refresh-btn" id="refreshBtn" onclick="loadEventsNow()">
+            <i class="fas fa-sync-alt"></i> Refresh Events
+        </button>
+        <div class="last-updated" id="lastUpdated">Ready</div>
+
+        <!-- Event Table -->
+        <div class="events-container">
+            <table id="events" class="display" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>Endpoint ID</th>
+                        <th>Timestamp</th>
+                        <th>Event Type</th>
+                        <th>Details</th>
+                        <th>Received At</th>
+                    </tr>
+                </thead>
+                <tbody id="eventsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Event Detail Modal -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-info-circle"></i> Event Details</h2>
+                <button class="close-btn" onclick="closeEventModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="event-detail-grid" id="eventDetailGrid">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allEvents = [];
+        let filteredEvents = [];
+        let dataTable = null;
+        let currentTimeFilter = 1;
+        let charts = {};
+
+        const chartColors = [
+            '#00d4ff', '#00ff88', '#ffaa00', '#ff4444', '#aa44ff',
+            '#44ff44', '#ff6600', '#00ffff', '#ff00ff', '#ffff00'
+        ];
+
+        function initDataTable() {
+            if (dataTable) {
+                dataTable.destroy();
+            }
+            
+            dataTable = $('#events').DataTable({
+                "order": [[1, "desc"]],
+                "pageLength": 25,
+                "autoWidth": false,
+                "columnDefs": [
+                    { "width": "10%", "targets": 0 },
+                    { "width": "12%", "targets": 1 },
+                    { "width": "8%", "targets": 2 },
+                    { "width": "60%", "targets": 3 },
+                    { "width": "10%", "targets": 4 }
+                ]
+            });
+
+            $('#events tbody').on('click', 'tr', function() {
+                const rowData = dataTable.row(this).data();
+                if (rowData) {
+                    showEventDetails(rowData);
+                }
+            });
+        }
+
+        function formatDateTime(dateStr) {
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleString();
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        function truncateDetails(details, maxLength = 200) {
+            if (!details) return '-';
+            return details;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function loadEventsNow() {
+            document.getElementById('refreshBtn').disabled = true;
+
+            fetch('/api/data-transfer/events?limit=2000')
+                .then(response => {
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success && data.events) {
+                        allEvents = data.events;
+                        applyTimeFilter();
+                        updateMetrics();
+                        updateCharts();
+                        
+                        const now = new Date();
+                        document.getElementById('lastUpdated').innerHTML = `<i class="fas fa-check-circle" style="color: #00ff88;"></i> Last updated: ${now.toLocaleTimeString()}`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading events:', error);
+                    document.getElementById('lastUpdated').innerHTML = `<i class="fas fa-exclamation-circle" style="color: #ff4444;"></i> Error loading events`;
+                })
+                .finally(() => {
+                    document.getElementById('refreshBtn').disabled = false;
+                });
+        }
+
+        function applyTimeFilter() {
+            if (!currentTimeFilter) {
+                filteredEvents = [...allEvents];
+            } else {
+                const now = new Date();
+                filteredEvents = allEvents.filter(event => {
+                    const eventDate = new Date(event.timestamp);
+                    const diffHours = (now - eventDate) / (1000 * 60 * 60);
+                    return diffHours <= currentTimeFilter;
+                });
+            }
+            renderEventsTable(filteredEvents);
+        }
+
+        function setTimeFilter(hours) {
+            currentTimeFilter = hours;
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            applyTimeFilter();
+            updateCharts();
+        }
+
+        function performRegexSearch() {
+            const pattern = document.getElementById('regexPattern').value.trim();
+            const searchField = document.getElementById('searchField').value;
+            const searchInfo = document.getElementById('searchInfo');
+
+            if (!pattern) {
+                searchInfo.innerHTML = '<span style="color: #ff4444;">Please enter a regex pattern</span>';
+                return;
+            }
+
+            try {
+                const regex = new RegExp(pattern, 'i');
+                const results = filteredEvents.filter(event => {
+                    let searchText = '';
+                    
+                    if (searchField === 'details') {
+                        searchText = event.details || '';
+                    } else if (searchField === 'event_type') {
+                        searchText = event.event_type || '';
+                    } else if (searchField === 'endpoint_id') {
+                        searchText = event.endpoint_id || '';
+                    } else if (searchField === 'all') {
+                        searchText = `${event.details} ${event.event_type} ${event.endpoint_id}`;
+                    }
+                    
+                    return regex.test(searchText);
+                });
+
+                renderEventsTable(results);
+                searchInfo.innerHTML = `<span style="color: #00ff88;"><i class="fas fa-check-circle"></i> Found ${results.length} matching events</span>`;
+            } catch (error) {
+                searchInfo.innerHTML = `<span style="color: #ff4444;"><i class="fas fa-exclamation-circle"></i> Invalid regex: ${error.message}</span>`;
+            }
+        }
+
+        function renderEventsTable(events) {
+            const tbody = document.getElementById('eventsTableBody');
+            tbody.innerHTML = '';
+
+            if (!events || events.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">No events found</td></tr>';
+                return;
+            }
+
+            events.forEach(event => {
+                const row = document.createElement('tr');
+                const detailsPreview = event.details && event.details.length > 300 
+                    ? event.details.substring(0, 300) + '...' 
+                    : event.details;
+                
+                row.innerHTML = `
+                    <td><span class="endpoint-badge">${escapeHtml(event.endpoint_id || '-')}</span></td>
+                    <td class="timestamp">${formatDateTime(event.timestamp)}</td>
+                    <td><span class="event-badge">${escapeHtml(event.event_type || '-')}</span></td>
+                    <td style="word-break: break-all; white-space: normal; max-width: 500px;" title="Click to see full details">${escapeHtml(detailsPreview)}</td>
+                    <td class="timestamp">${formatDateTime(event.received_at)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            if (dataTable) {
+                dataTable.clear().rows.add($('#events tbody tr')).draw(false);
+            }
+        }
+
+        function showEventDetails(rowData) {
+            const [endpointId, timestamp, eventType, details, receivedAt] = rowData;
+
+            let gridHtml = '';
+            gridHtml += `<div class="detail-label">Endpoint ID</div>`;
+            gridHtml += `<div class="detail-value">${escapeHtml(endpointId)}</div>`;
+            gridHtml += `<div class="detail-label">Event Type</div>`;
+            gridHtml += `<div class="detail-value">${escapeHtml(eventType)}</div>`;
+            gridHtml += `<div class="detail-label">Timestamp</div>`;
+            gridHtml += `<div class="detail-value">${formatDateTime(timestamp)}</div>`;
+            gridHtml += `<div class="detail-label">Received At</div>`;
+            gridHtml += `<div class="detail-value">${formatDateTime(receivedAt)}</div>`;
+            gridHtml += `<div class="detail-label" style="grid-column: 1;">Details</div>`;
+            gridHtml += `<div class="detail-value" style="grid-column: 2;">${escapeHtml(details)}</div>`;
+
+            document.getElementById('eventDetailGrid').innerHTML = gridHtml;
+            
+            // Add copy button after grid
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'search-btn';
+            copyBtn.style.marginTop = '15px';
+            copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy All Details';
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(details).then(() => {
+                    copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    setTimeout(() => {
+                        copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy All Details';
+                    }, 2000);
+                });
+            };
+            
+            const modalBody = document.querySelector('.modal-body');
+            const existingBtn = modalBody.querySelector('.search-btn');
+            if (existingBtn) {
+                existingBtn.remove();
+            }
+            modalBody.appendChild(copyBtn);
+            
+            document.getElementById('eventModal').style.display = 'block';
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').style.display = 'none';
+        }
+
+        function updateMetrics() {
+            document.getElementById('totalEvents').textContent = allEvents.length;
+            const endpoints = new Set(allEvents.map(e => e.endpoint_id)).size;
+            document.getElementById('activeEndpoints').textContent = endpoints;
+            const eventTypes = new Set(allEvents.map(e => e.event_type)).size;
+            document.getElementById('eventTypes').textContent = eventTypes;
+        }
+
+        function updateCharts() {
+            updateEventTypeChart();
+            updateEndpointChart();
+            updateTimelineChart();
+        }
+
+        function updateEventTypeChart() {
+            const eventTypeCounts = {};
+            filteredEvents.forEach(event => {
+                const type = event.event_type || 'Unknown';
+                eventTypeCounts[type] = (eventTypeCounts[type] || 0) + 1;
+            });
+
+            const ctx = document.getElementById('eventTypeChart').getContext('2d');
+            
+            if (charts.eventType) {
+                charts.eventType.destroy();
+            }
+
+            const labels = Object.keys(eventTypeCounts);
+            const data = Object.values(eventTypeCounts);
+
+            charts.eventType = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: chartColors.slice(0, labels.length),
+                        borderColor: '#000',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e0e0', font: { size: 12 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateEndpointChart() {
+            const endpointCounts = {};
+            filteredEvents.forEach(event => {
+                const endpoint = event.endpoint_id || 'Unknown';
+                endpointCounts[endpoint] = (endpointCounts[endpoint] || 0) + 1;
+            });
+
+            const sorted = Object.entries(endpointCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+
+            const ctx = document.getElementById('endpointChart').getContext('2d');
+            
+            if (charts.endpoint) {
+                charts.endpoint.destroy();
+            }
+
+            charts.endpoint = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(([ep, _]) => ep.substring(0, 8) + '...'),
+                    datasets: [{
+                        label: 'Events',
+                        data: sorted.map(([_, count]) => count),
+                        backgroundColor: '#00d4ff',
+                        borderColor: '#00bfff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e0e0' }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#00d4ff' }, grid: { color: '#333' } },
+                        y: { ticks: { color: '#00d4ff' }, grid: { color: '#333' } }
+                    }
+                }
+            });
+        }
+
+        function updateTimelineChart() {
+            const timeSlots = {};
+            const now = new Date();
+
+            for (let i = 23; i >= 0; i--) {
+                const date = new Date(now);
+                date.setHours(date.getHours() - i);
+                const hour = date.getHours() + ':00';
+                timeSlots[hour] = 0;
+            }
+
+            filteredEvents.forEach(event => {
+                const date = new Date(event.timestamp);
+                const hour = date.getHours() + ':00';
+                if (hour in timeSlots) {
+                    timeSlots[hour]++;
+                }
+            });
+
+            const ctx = document.getElementById('timelineChart').getContext('2d');
+            
+            if (charts.timeline) {
+                charts.timeline.destroy();
+            }
+
+            charts.timeline = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(timeSlots),
+                    datasets: [{
+                        label: 'Events per Hour',
+                        data: Object.values(timeSlots),
+                        borderColor: '#00d4ff',
+                        backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#00ff88',
+                        pointBorderColor: '#00d4ff',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e0e0e0' }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#00d4ff' }, grid: { color: '#333' } },
+                        y: { ticks: { color: '#00d4ff' }, grid: { color: '#333' } }
+                    }
+                }
+            });
+        }
+
+        let lastProcessSearch = null;
+
+        function calculateProcessPercentage() {
+            const processName = document.getElementById('processSearch').value.trim();
+            const timeRange = document.getElementById('timeRangeFilter').value;
+            
+            if (!processName) {
+                alert('Please enter a process name');
+                return;
+            }
+
+            let eventsToSearch = timeRange === 'all' ? allEvents : filteredEvents;
+            
+            if (eventsToSearch.length === 0) {
+                alert('No events to search');
+                return;
+            }
+
+            // Count occurrences (case-insensitive partial match)
+            let count = 0;
+            eventsToSearch.forEach(event => {
+                const details = (event.details || '').toLowerCase();
+                if (details.includes(processName.toLowerCase())) {
+                    count++;
+                }
+            });
+
+            const percentage = (count / eventsToSearch.length) * 100;
+            let frequency = '';
+            
+            if (percentage === 0) {
+                frequency = 'Not seen in current dataset';
+            } else if (percentage < 1) {
+                frequency = 'Extremely rare';
+            } else if (percentage < 5) {
+                frequency = 'Very rare';
+            } else if (percentage < 10) {
+                frequency = 'Rare';
+            } else if (percentage < 25) {
+                frequency = 'Uncommon';
+            } else if (percentage < 50) {
+                frequency = 'Moderate';
+            } else if (percentage < 75) {
+                frequency = 'Common';
+            } else if (percentage < 95) {
+                frequency = 'Very common';
+            } else {
+                frequency = 'Almost always';
+            }
+
+            // Display results
+            document.getElementById('procName').textContent = processName;
+            document.getElementById('procCount').textContent = count + ' times';
+            document.getElementById('totalCount').textContent = eventsToSearch.length + ' events';
+            document.getElementById('procPercentage').innerHTML = `
+                <span style="font-size: 24px; color: #00ff88;">${percentage.toFixed(2)}%</span>
+                <svg style="display: inline-block; margin-left: 10px; width: 100px; height: 30px;">
+                    <rect x="0" y="5" width="100" height="20" fill="rgba(0, 212, 255, 0.1)" stroke="#00d4ff" stroke-width="1" rx="3"/>
+                    <rect x="0" y="5" width="${percentage}" height="20" fill="#00ff88" rx="3"/>
+                    <text x="50" y="20" text-anchor="middle" font-size="12" fill="#000" font-weight="bold">${percentage.toFixed(1)}%</text>
+                </svg>
+            `;
+            document.getElementById('procFrequency').textContent = frequency;
+            document.getElementById('percentageResult').style.display = 'block';
+
+            lastProcessSearch = processName;
+        }
+
+        function filterByProcess() {
+            if (!lastProcessSearch) {
+                alert('Please calculate first');
+                return;
+            }
+
+            const regex = new RegExp(lastProcessSearch, 'i');
+            const results = filteredEvents.filter(event => {
+                const searchText = `${event.details} ${event.event_type} ${event.endpoint_id}`;
+                return regex.test(searchText);
+            });
+
+            renderEventsTable(results);
+            document.getElementById('searchInfo').innerHTML = `<span style="color: #00ff88;"><i class="fas fa-check-circle"></i> Filtered to ${results.length} events containing "${lastProcessSearch}"</span>`;
+        }
+
+        function getProcessFrequency(percentage) {
+            if (percentage === 0) return 'Not seen';
+            if (percentage < 1) return 'Extremely rare';
+            if (percentage < 5) return 'Very rare';
+            if (percentage < 10) return 'Rare';
+            if (percentage < 25) return 'Uncommon';
+            if (percentage < 50) return 'Moderate';
+            if (percentage < 75) return 'Common';
+            if (percentage < 95) return 'Very common';
+            return 'Almost always';
+        }
+
+        function updateAlertCount() {
+            fetch('/api/alerts')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.triggered_count !== undefined) {
+                        const alertCount = document.getElementById('activeAlerts');
+                        if (alertCount) {
+                            alertCount.textContent = data.triggered_count;
+                            if (data.triggered_count > 0) {
+                                alertCount.style.color = '#ff0000';
+                            } else {
+                                alertCount.style.color = '#00ff88';
+                            }
+                        }
+                    }
+                })
+                .catch(error => console.log('Could not fetch alerts:', error));
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initDataTable();
+            loadEventsNow();
+            updateAlertCount();
+            
+            setInterval(() => {
+                loadEventsNow();
+                updateAlertCount();
+            }, 10000);
+        });
+
+        document.getElementById('regexPattern').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performRegexSearch();
+            }
+        });
+
+        document.getElementById('processSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                calculateProcessPercentage();
+            }
+        });
+    </script>
+</body>
+</html>

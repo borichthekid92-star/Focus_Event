@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EDR Analytics Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        .card-header {
+            background-color: #343a40;
+            color: white;
+            font-weight: bold;
+        }
+        .risk-low {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .risk-medium {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .risk-high {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .process-badge {
+            font-size: 0.9em;
+            margin-right: 5px;
+        }
+        #processTrendsChart, #riskDistributionChart {
+            max-height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-shield-alt me-2"></i>EDR Analytics Dashboard
+            </a>
+            <div class="d-flex">
+                <a href="/logout" class="btn btn-outline-light">
+                    <i class="fas fa-sign-out-alt me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Summary Cards Row -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line me-2"></i> Total Events
+                    </div>
+                    <div class="card-body text-center">
+                        <h2 id="totalEventsCount">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-exclamation-triangle me-2"></i> High Risk Processes
+                    </div>
+                    <div class="card-body text-center">
+                        <h2 id="highRiskCount">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-search me-2"></i> Flagged Processes
+                    </div>
+                    <div class="card-body text-center">
+                        <h2 id="flaggedProcessesCount">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-terminal me-2"></i> Pending Commands
+                    </div>
+                    <div class="card-body text-center">
+                        <h2 id="pendingCommandsCount">0</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Row -->
+        <div class="row mt-3">
+            <!-- Top Processes Column -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-star me-2"></i> Top 5 Processes by Event Count
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Process</th>
+                                        <th>Event Count</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topProcessesTable">
+                                    <!-- Populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Least Used Processes Column -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <i class="fas fa-arrow-down me-2"></i> Least 10 Processes
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Process</th>
+                                        <th>Event Count</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leastProcessesTable">
+                                    <!-- Populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Statistics and Charts Column -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-balance-scale me-2"></i> Risk Statistics
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="riskAccordion">
+                            <!-- Low Risk Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button risk-low" type="button" data-bs-toggle="collapse" data-bs-target="#lowRiskCollapse">
+                                        Low Risk Processes (<1%)
+                                    </button>
+                                </h2>
+                                <div id="lowRiskCollapse" class="accordion-collapse collapse show" data-bs-parent="#riskAccordion">
+                                    <div class="accordion-body">
+                                        <div id="lowRiskProcesses"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Medium Risk Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button risk-medium" type="button" data-bs-toggle="collapse" data-bs-target="#mediumRiskCollapse">
+                                        Medium Risk Processes (1-10%)
+                                    </button>
+                                </h2>
+                                <div id="mediumRiskCollapse" class="accordion-collapse collapse" data-bs-parent="#riskAccordion">
+                                    <div class="accordion-body">
+                                        <div id="mediumRiskProcesses"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- High Risk Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button risk-high" type="button" data-bs-toggle="collapse" data-bs-target="#highRiskCollapse">
+                                        High Risk Processes (10-30%)
+                                    </button>
+                                </h2>
+                                <div id="highRiskCollapse" class="accordion-collapse collapse" data-bs-parent="#riskAccordion">
+                                    <div class="accordion-body">
+                                        <div id="highRiskProcesses"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Process Trends Chart -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar me-2"></i> Process Trends
+                    </div>
+                    <div class="card-body">
+                        <canvas id="processTrendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Command History Row -->
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-history me-2"></i> Recent Command History
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Endpoint</th>
+                                        <th>Command</th>
+                                        <th>Status</th>
+                                        <th>Result Preview</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="commandHistoryTable">
+                                    <!-- Populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery for AJAX -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        // Fetch and display data when page loads
+        $(document).ready(function() {
+            // 1. Fetch and display summary counts
+            fetchSummaryCounts();
+
+            // 2. Fetch and display top processes
+            fetchTopProcesses();
+
+            // 3. Fetch and display least processes
+            fetchLeastProcesses();
+
+            // 4. Fetch and display risk statistics
+            fetchRiskStats();
+
+            // 5. Fetch and display command history
+            fetchCommandHistory();
+
+            // 6. Initialize charts
+            initCharts();
+
+            // Refresh data every 30 seconds
+            setInterval(function() {
+                fetchSummaryCounts();
+                fetchRiskStats();
+                fetchCommandHistory();
+            }, 30000);
+        });
+
+        // 1. Fetch summary counts
+        function fetchSummaryCounts() {
+            $.get('/api/analytics/summary', function(data) {
+                $('#totalEventsCount').text(data.total_events);
+                $('#highRiskCount').text(data.high_risk_count);
+                $('#flaggedProcessesCount').text(data.flagged_processes);
+                $('#pendingCommandsCount').text(data.pending_commands);
+            }).fail(function() {
+                console.error("Failed to fetch summary counts");
+            });
+        }
+
+        // 2. Fetch and display top processes
+        function fetchTopProcesses() {
+            $.get('/api/analytics/top-processes', function(processes) {
+                let tableBody = $('#topProcessesTable');
+                tableBody.empty();
+
+                let totalEvents = processes.reduce((sum, proc) => sum + proc.event_count, 0);
+
+                processes.forEach((proc, index) => {
+                    let percentage = totalEvents > 0 ? (proc.event_count / totalEvents * 100).toFixed(2) : 0;
+                    let badgeClass = getBadgeClass(index);
+
+                    tableBody.append(`
+                        <tr>
+                            <td><span class="badge ${badgeClass} process-badge">${proc.rank}</span></td>
+                            <td>${proc.process_name}</td>
+                            <td>${proc.event_count}</td>
+                            <td>${percentage}%</td>
+                        </tr>
+                    `);
+                });
+            }).fail(function() {
+                console.error("Failed to fetch top processes");
+            });
+        }
+
+        // 3. Fetch and display least processes
+        function fetchLeastProcesses() {
+            $.get('/api/analytics/least-processes', function(processes) {
+                let tableBody = $('#leastProcessesTable');
+                tableBody.empty();
+
+                processes.forEach((proc, index) => {
+                    let status = proc.flagged ? 'Flagged' : 'Normal';
+                    let statusClass = proc.flagged ? 'text-danger' : 'text-success';
+                    let badgeClass = getBadgeClass(index, true);
+
+                    tableBody.append(`
+                        <tr>
+                            <td><span class="badge ${badgeClass} process-badge">${proc.rank}</span></td>
+                            <td>${proc.process_name}</td>
+                            <td>${proc.event_count}</td>
+                            <td class="${statusClass}">${status}</td>
+                        </tr>
+                    `);
+                });
+            }).fail(function() {
+                console.error("Failed to fetch least processes");
+            });
+        }
+
+        // 4. Fetch and display risk statistics
+        function fetchRiskStats() {
+            $.get('/api/risk-stats', function(data) {
+                // Low Risk Processes
+                let lowRiskContainer = $('#lowRiskProcesses');
+                lowRiskContainer.empty();
+                data.low_risk.forEach(proc => {
+                    lowRiskContainer.append(`
+                        <div class="mb-2 p-2 bg-light rounded">
+                            <strong>${proc.process}</strong>:
+                            ${proc.count} events (${proc.ratio}%)
+                        </div>
+                    `);
+                });
+
+                // Medium Risk Processes
+                let mediumRiskContainer = $('#mediumRiskProcesses');
+                mediumRiskContainer.empty();
+                data.medium_risk.forEach(proc => {
+                    mediumRiskContainer.append(`
+                        <div class="mb-2 p-2 bg-light rounded">
+                            <strong>${proc.process}</strong>:
+                            ${proc.count} events (${proc.ratio}%)
+                        </div>
+                    `);
+                });
+
+                // High Risk Processes
+                let highRiskContainer = $('#highRiskProcesses');
+                highRiskContainer.empty();
+                data.high_risk.forEach(proc => {
+                    highRiskContainer.append(`
+                        <div class="mb-2 p-2 bg-light rounded">
+                            <strong>${proc.process}</strong>:
+                            ${proc.count} events (${proc.ratio}%)
+                        </div>
+                    `);
+                });
+
+                // Update chart
+                updateRiskDistributionChart(data);
+            }).fail(function() {
+                console.error("Failed to fetch risk stats");
+            });
+        }
+
+        // 5. Fetch and display command history
+        function fetchCommandHistory() {
+            $.get('/api/command-history', function(history) {
+                let tableBody = $('#commandHistoryTable');
+                tableBody.empty();
+
+                history.forEach(cmd => {
+                    let statusBadge = getStatusBadge(cmd.status);
+                    let resultPreview = cmd.result.length > 30 ?
+                        cmd.result.substring(0, 30) + '...' : cmd.result;
+
+                    tableBody.append(`
+                        <tr>
+                            <td>${new Date(cmd.timestamp).toLocaleString()}</td>
+                            <td>${cmd.endpoint_id}</td>
+                            <td>${cmd.command}</td>
+                            <td>${statusBadge}</td>
+                            <td>${resultPreview}</td>
+                        </tr>
+                    `);
+                });
+            }).fail(function() {
+                console.error("Failed to fetch command history");
+            });
+        }
+
+        // 6. Initialize charts
+        function initCharts() {
+            // Process Trends Chart
+            const trendsCtx = document.getElementById('processTrendsChart').getContext('2d');
+            window.processTrendsChart = new Chart(trendsCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Event Count',
+                        data: [],
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Risk Distribution Chart
+            const riskCtx = document.getElementById('riskDistributionChart').getContext('2d');
+            window.riskDistributionChart = new Chart(riskCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+                    datasets: [{
+                        data: [0, 0, 0],
+                        backgroundColor: [
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(255, 99, 132, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update risk distribution chart
+        function updateRiskDistributionChart(data) {
+            const lowCount = data.low_risk.length;
+            const mediumCount = data.medium_risk.length;
+            const highCount = data.high_risk.length;
+
+            window.riskDistributionChart.data.datasets[0].data = [lowCount, mediumCount, highCount];
+            window.riskDistributionChart.update();
+        }
+
+        // Helper: Get badge class based on rank
+        function getBadgeClass(rank, isLeast=false) {
+            if (isLeast) {
+                if (rank === 0) return 'bg-danger';  // Absolute least
+                else if (rank < 3) return 'bg-warning';
+                else return 'bg-secondary';
+            } else {
+                if (rank === 0) return 'bg-primary';  // Top process
+                else if (rank < 3) return 'bg-success';
+                else return 'bg-info';
+            }
+        }
+
+        // Helper: Get status badge
+        function getStatusBadge(status) {
+            let badgeClass = '';
+            let badgeText = status;
+
+            switch(status.toLowerCase()) {
+                case 'completed':
+                    badgeClass = 'bg-success';
+                    break;
+                case 'failed':
+                    badgeClass = 'bg-danger';
+                    break;
+                case 'pending':
+                    badgeClass = 'bg-warning';
+                    break;
+                default:
+                    badgeClass = 'bg-secondary';
+            }
+
+            return `<span class="badge ${badgeClass}">${badgeText}</span>`;
+        }
+    </script>
+</body>
+</html>

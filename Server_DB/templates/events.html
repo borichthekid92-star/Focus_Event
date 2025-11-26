@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Events</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+        }
+        
+        .header-stats {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .stat-box {
+            background: #f5f5f5;
+            padding: 15px 25px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-label {
+            color: #999;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .search-group {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .search-group input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .search-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-secondary:hover {
+            background: #e8e8e8;
+        }
+        
+        .refresh-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: #f9f9f9;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #555;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+        
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        tbody tr {
+            transition: background 0.2s ease;
+        }
+        
+        tbody tr:hover {
+            background: #f9f9f9;
+        }
+        
+        .event-type {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .event-type.process {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .event-type.file {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .event-type.network {
+            background: #e0f2f1;
+            color: #00796b;
+        }
+        
+        .event-type.registry {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        
+        .event-type.window {
+            background: #f1f8e9;
+            color: #558b2f;
+        }
+        
+        .event-type.default {
+            background: #eeeeee;
+            color: #424242;
+        }
+        
+        .endpoint-badge {
+            background: #e8eaf6;
+            color: #3f51b5;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .timestamp {
+            color: #999;
+            font-size: 13px;
+        }
+        
+        .details {
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: help;
+        }
+        
+        .details:hover {
+            text-decoration: underline;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        .empty-state h2 {
+            color: #555;
+            margin-bottom: 10px;
+            font-size: 20px;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .pagination button {
+            padding: 8px 15px;
+            font-size: 13px;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .modal-close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        .modal-field {
+            margin-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 15px;
+        }
+        
+        .modal-label {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .modal-value {
+            word-break: break-all;
+            color: #333;
+            font-size: 14px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .header-stats {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+            
+            .search-group {
+                min-width: auto;
+            }
+            
+            .table-wrapper {
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Security Events</h1>
+                <p style="color: #999; margin-top: 5px;">Real-time events from connected endpoints</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-box">
+                    <div class="stat-label">Total Events</div>
+                    <div class="stat-value" id="total-events">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Active Endpoints</div>
+                    <div class="stat-value" id="active-endpoints">-</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="search-group">
+                <input type="text" id="search-input" placeholder="Search events...">
+                <input type="text" id="endpoint-filter" placeholder="Filter by endpoint ID...">
+            </div>
+            <div class="button-group">
+                <button class="btn-primary" onclick="loadEvents()">🔄 Refresh</button>
+                <button class="btn-secondary" onclick="clearFilters()">Clear Filters</button>
+                <span class="refresh-status">
+                    <span id="auto-refresh-indicator" style="display: none;">Auto-refresh <span class="spinner"></span></span>
+                </span>
+            </div>
+        </div>
+        
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading events...</p>
+        </div>
+        
+        <div id="events-container" style="display: none;">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Endpoint</th>
+                            <th>Event Type</th>
+                            <th>Timestamp</th>
+                            <th>Received</th>
+                            <th>Details</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="events-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <div class="empty-state-icon">📭</div>
+            <h2>No Events Found</h2>
+            <p>Events will appear here as they're collected from your endpoints.</p>
+        </div>
+    </div>
+    
+    <!-- Modal for detailed view -->
+    <div id="eventModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <div class="modal-header" id="modal-event-type"></div>
+            
+            <div class="modal-field">
+                <div class="modal-label">Endpoint ID</div>
+                <div class="modal-value" id="modal-endpoint"></div>
+            </div>
+            
+            <div class="modal-field">
+                <div class="modal-label">Event Type</div>
+                <div class="modal-value" id="modal-type"></div>
+            </div>
+            
+            <div class="modal-field">
+                <div class="modal-label">Timestamp</div>
+                <div class="modal-value" id="modal-timestamp"></div>
+            </div>
+            
+            <div class="modal-field">
+                <div class="modal-label">Received At</div>
+                <div class="modal-value" id="modal-received"></div>
+            </div>
+            
+            <div class="modal-field">
+                <div class="modal-label">Details</div>
+                <div class="modal-value" id="modal-details" style="word-break: break-word;"></div>
+            </div>
+            
+            <div class="modal-field" style="border: none;">
+                <div class="modal-label">Event ID</div>
+                <div class="modal-value" id="modal-id"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allEvents = [];
+        let autoRefreshInterval;
+        
+        // Get event type badge class
+        function getEventTypeClass(eventType) {
+            if (!eventType) return 'default';
+            const type = eventType.toLowerCase();
+            if (type.includes('process')) return 'process';
+            if (type.includes('file')) return 'file';
+            if (type.includes('network')) return 'network';
+            if (type.includes('registry')) return 'registry';
+            if (type.includes('window')) return 'window';
+            return 'default';
+        }
+        
+        // Format timestamp
+        function formatTime(timestamp) {
+            if (!timestamp) return '-';
+            try {
+                const date = new Date(timestamp);
+                return date.toLocaleString();
+            } catch (e) {
+                return timestamp;
+            }
+        }
+        
+        // Load events from server
+        async function loadEvents() {
+            const searchInput = document.getElementById('search-input').value;
+            const endpointFilter = document.getElementById('endpoint-filter').value;
+            
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('events-container').style.display = 'none';
+            document.getElementById('empty-state').style.display = 'none';
+            
+            try {
+                let url = '/api/data-transfer/events?limit=500';
+                
+                if (endpointFilter) {
+                    url += `&endpoint_id=${encodeURIComponent(endpointFilter)}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.events) {
+                    allEvents = data.events;
+                    
+                    // Filter by search term
+                    let filteredEvents = allEvents;
+                    if (searchInput) {
+                        const search = searchInput.toLowerCase();
+                        filteredEvents = allEvents.filter(event => 
+                            (event.details && event.details.toLowerCase().includes(search)) ||
+                            (event.event_type && event.event_type.toLowerCase().includes(search)) ||
+                            (event.endpoint_id && event.endpoint_id.toLowerCase().includes(search))
+                        );
+                    }
+                    
+                    renderEvents(filteredEvents);
+                    updateStats();
+                } else {
+                    showEmpty();
+                }
+            } catch (error) {
+                console.error('Error loading events:', error);
+                showEmpty();
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+        
+        // Render events in table
+        function renderEvents(events) {
+            const tbody = document.getElementById('events-table-body');
+            tbody.innerHTML = '';
+            
+            if (events.length === 0) {
+                showEmpty();
+                return;
+            }
+            
+            document.getElementById('events-container').style.display = 'block';
+            document.getElementById('empty-state').style.display = 'none';
+            
+            events.forEach(event => {
+                const row = document.createElement('tr');
+                const eventTypeClass = getEventTypeClass(event.event_type);
+                const shortDetails = event.details && event.details.length > 100 
+                    ? event.details.substring(0, 100) + '...' 
+                    : event.details;
+                
+                row.innerHTML = `
+                    <td><span class="endpoint-badge">${escapeHtml(event.endpoint_id || '-')}</span></td>
+                    <td><span class="event-type ${eventTypeClass}">${escapeHtml(event.event_type || '-')}</span></td>
+                    <td><span class="timestamp">${formatTime(event.timestamp)}</span></td>
+                    <td><span class="timestamp">${formatTime(event.received_at)}</span></td>
+                    <td><div class="details" title="${escapeHtml(event.details || '')}">${escapeHtml(shortDetails || '-')}</div></td>
+                    <td><button class="btn-secondary" onclick="showEventDetails(${JSON.stringify(event).replace(/"/g, '&quot;')})">View</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Update statistics
+        function updateStats() {
+            document.getElementById('total-events').textContent = allEvents.length;
+            
+            const endpoints = new Set(allEvents.map(e => e.endpoint_id)).size;
+            document.getElementById('active-endpoints').textContent = endpoints;
+        }
+        
+        // Show empty state
+        function showEmpty() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('events-container').style.display = 'none';
+            document.getElementById('empty-state').style.display = 'block';
+        }
+        
+        // Show event details in modal
+        function showEventDetails(event) {
+            document.getElementById('modal-id').textContent = event.id;
+            document.getElementById('modal-endpoint').textContent = event.endpoint_id;
+            document.getElementById('modal-type').textContent = event.event_type;
+            document.getElementById('modal-timestamp').textContent = formatTime(event.timestamp);
+            document.getElementById('modal-received').textContent = formatTime(event.received_at);
+            document.getElementById('modal-details').textContent = event.details;
+            document.getElementById('modal-event-type').textContent = `${event.event_type} Details`;
+            
+            document.getElementById('eventModal').style.display = 'block';
+        }
+        
+        // Close modal
+        function closeModal() {
+            document.getElementById('eventModal').style.display = 'none';
+        }
+        
+        // Clear filters
+        function clearFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('endpoint-filter').value = '';
+            loadEvents();
+        }
+        
+        // Escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text ? text.replace(/[&<>"']/g, m => map[m]) : '';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('eventModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // Auto-refresh every 5 seconds
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(() => {
+                loadEvents();
+            }, 5000);
+        }
+        
+        // Initial load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadEvents();
+            startAutoRefresh();
+        });
+        
+        // Allow search with Enter key
+        document.getElementById('search-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadEvents();
+            }
+        });
+        
+        document.getElementById('endpoint-filter').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadEvents();
+            }
+        });
+    </script>
+</body>
+</html>

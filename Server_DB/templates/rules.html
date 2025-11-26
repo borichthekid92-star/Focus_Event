@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Detection Rules - Simple Keyword Search</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', monospace;
+      background: #0f1520;
+      color: #e6edf3;
+      padding: 20px;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { color: #57a8ff; margin-bottom: 10px; }
+    .subtitle { color: #8b949e; margin-bottom: 25px; font-size: 14px; }
+    .section {
+      background: #161b2a;
+      border: 1px solid #22314a;
+      border-radius: 8px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+    .section-title {
+      color: #57a8ff;
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #22314a;
+    }
+    label {
+      display: block;
+      color: #8b949e;
+      font-size: 12px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      margin-top: 15px;
+    }
+    input[type="text"], textarea, select {
+      width: 100%;
+      padding: 12px;
+      background: #0f1520;
+      color: #e6edf3;
+      border: 1px solid #22314a;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #57a8ff;
+      box-shadow: 0 0 8px rgba(87, 168, 255, 0.3);
+    }
+    textarea { height: 120px; resize: vertical; }
+    .btn {
+      padding: 12px 20px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+    .btn.primary { background: #57a8ff; color: #000; }
+    .btn.primary:hover { background: #79c0ff; }
+    .btn.success { background: #5bd17c; color: #000; }
+    .btn.success:hover { background: #7de5a0; }
+    .btn.secondary { background: #22314a; color: #57a8ff; }
+    .btn.secondary:hover { background: #2d3f56; }
+    #status {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 6px;
+      display: none;
+    }
+    #status.success {
+      display: block;
+      background: rgba(91, 209, 124, 0.2);
+      border: 1px solid #5bd17c;
+      color: #5bd17c;
+    }
+    #status.error {
+      display: block;
+      background: rgba(255, 107, 107, 0.2);
+      border: 1px solid #ff6b6b;
+      color: #ff6b6b;
+    }
+    .info-box {
+      background: rgba(87, 168, 255, 0.1);
+      border-left: 4px solid #57a8ff;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #8b949e;
+      line-height: 1.6;
+    }
+    .example-box {
+      background: #0f1520;
+      border: 1px solid #22314a;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .example-title { color: #57a8ff; font-weight: bold; margin-bottom: 8px; }
+    .example-text { color: #8b949e; font-family: monospace; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Detection Rules - Simple Keyword Search</h1>
+    <p class="subtitle">Search entire event logs for keywords using regex patterns</p>
+
+    <div class="grid">
+      <!-- Left: Form -->
+      <div>
+        <div class="section">
+          <div class="section-title">📝 Create Detection Rule</div>
+
+          <label>Rule Name *</label>
+          <input type="text" id="ruleName" placeholder="e.g., Suspicious PowerShell Activity">
+
+          <label>Severity *</label>
+          <select id="ruleSeverity">
+            <option value="critical">🔴 Critical</option>
+            <option value="high">🟠 High</option>
+            <option value="medium" selected>🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+
+          <label>Search Pattern (Regex) *</label>
+          <input type="text" id="searchPattern" placeholder="e.g., .*powershell.* or .*malware.* or .*error.*">
+          <div style="font-size: 11px; color: #8b949e; margin-top: -12px; margin-bottom: 12px;">
+            Searches entire event log for this pattern (case-insensitive)
+          </div>
+
+          <label>Description</label>
+          <textarea id="ruleDescription" placeholder="What this rule detects..."></textarea>
+
+          <label>Tags (comma-separated)</label>
+          <input type="text" id="ruleTags" placeholder="e.g., security, malware, suspicious">
+
+          <div class="info-box">
+            <strong>ℹ️ How it works:</strong> This rule searches the entire event log for your pattern. 
+            It concatenates all event fields and matches against them case-insensitively.
+          </div>
+
+          <button class="btn primary" onclick="generateJSON()">📋 Generate Rule</button>
+          <button class="btn secondary" onclick="clearForm()">🔄 Clear</button>
+
+          <div id="status"></div>
+        </div>
+      </div>
+
+      <!-- Right: JSON & Examples -->
+      <div>
+        <div class="section">
+          <div class="section-title">📄 Rule JSON</div>
+          <textarea id="rule-json">{
+  "id": "rule-uuid",
+  "name": "Rule Name",
+  "severity": "medium",
+  "tags": ["example"],
+  "description": "Rule description",
+  "detection": {
+    "pattern": ".*keyword.*"
+  },
+  "meta": {
+    "enabled": true,
+    "hit_count": 0
+  }
+}</textarea>
+
+          <button class="btn primary" onclick="validateRule()">✅ Validate</button>
+          <button class="btn success" onclick="saveRule()">💾 Save Rule</button>
+        </div>
+
+        <div class="section">
+          <div class="section-title">💡 Example Patterns</div>
+
+          <div class="example-box">
+            <div class="example-title">PowerShell</div>
+            <div class="example-text">.*powershell.*</div>
+            <button class="btn secondary" style="font-size: 11px; padding: 6px 12px; margin-top: 8px;" 
+                    onclick="loadExample('powershell')">Load</button>
+          </div>
+
+          <div class="example-box">
+            <div class="example-title">Command Execution</div>
+            <div class="example-text">.*cmd\.exe.*|.*command.*</div>
+            <button class="btn secondary" style="font-size: 11px; padding: 6px 12px; margin-top: 8px;" 
+                    onclick="loadExample('cmd')">Load</button>
+          </div>
+
+          <div class="example-box">
+            <div class="example-title">Malware Keywords</div>
+            <div class="example-text">.*malware.*|.*virus.*|.*trojan.*</div>
+            <button class="btn secondary" style="font-size: 11px; padding: 6px 12px; margin-top: 8px;" 
+                    onclick="loadExample('malware')">Load</button>
+          </div>
+
+          <div class="example-box">
+            <div class="example-title">Error Detection</div>
+            <div class="example-text">.*error.*|.*failed.*|.*exception.*</div>
+            <button class="btn secondary" style="font-size: 11px; padding: 6px 12px; margin-top: 8px;" 
+                    onclick="loadExample('error')">Load</button>
+          </div>
+
+          <div class="example-box">
+            <div class="example-title">Network Activity</div>
+            <div class="example-text">.*connection.*|.*network.*|.*port.*</div>
+            <button class="btn secondary" style="font-size: 11px; padding: 6px 12px; margin-top: 8px;" 
+                    onclick="loadExample('network')">Load</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="margin-top: 20px;">
+      <div class="section-title">📚 Regex Quick Reference</div>
+      <table style="width: 100%; font-size: 12px; color: #8b949e;">
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #22314a;"><code>.*pattern.*</code></td>
+          <td style="padding: 8px; border-bottom: 1px solid #22314a;">Contains "pattern"</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #22314a;"><code>^pattern</code></td>
+          <td style="padding: 8px; border-bottom: 1px solid #22314a;">Starts with "pattern"</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #22314a;"><code>pattern$</code></td>
+          <td style="padding: 8px; border-bottom: 1px solid #22314a;">Ends with "pattern"</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px; border-bottom: 1px solid #22314a;"><code>pat1.*|.*pat2</code></td>
+          <td style="padding: 8px; border-bottom: 1px solid #22314a;">Contains "pat1" OR "pat2"</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px;"><code>[A-Z]</code></td>
+          <td style="padding: 8px;">Any uppercase letter</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function generateJSON() {
+      const name = document.getElementById('ruleName').value;
+      const pattern = document.getElementById('searchPattern').value;
+      const severity = document.getElementById('ruleSeverity').value;
+      const description = document.getElementById('ruleDescription').value;
+      const tagsStr = document.getElementById('ruleTags').value;
+
+      if (!name) {
+        showStatus('Rule name is required', 'error');
+        return;
+      }
+      if (!pattern) {
+        showStatus('Search pattern is required', 'error');
+        return;
+      }
+
+      const tags = tagsStr.split(',').map(t => t.trim()).filter(t => t);
+
+      const rule = {
+        id: 'rule-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+        name: name,
+        severity: severity,
+        tags: tags,
+        description: description,
+        detection: {
+          pattern: pattern
+        },
+        meta: {
+          enabled: true,
+          hit_count: 0
+        }
+      };
+
+      document.getElementById('rule-json').value = JSON.stringify(rule, null, 2);
+      showStatus('✅ JSON generated successfully', 'success');
+    }
+
+    function validateRule() {
+      const text = document.getElementById('rule-json').value;
+      try {
+        const obj = JSON.parse(text);
+        if (!obj.name || !obj.detection || !obj.detection.pattern) {
+          throw new Error('Missing: name and detection.pattern are required');
+        }
+        showStatus('✅ JSON is valid and ready to save', 'success');
+      } catch (e) {
+        showStatus('❌ Invalid JSON: ' + e.message, 'error');
+      }
+    }
+
+    async function saveRule() {
+      const text = document.getElementById('rule-json').value;
+      try {
+        const obj = JSON.parse(text);
+        
+        if (!obj.name || !obj.detection || !obj.detection.pattern) {
+          showStatus('❌ Missing required fields', 'error');
+          return;
+        }
+
+        const res = await fetch('/api/rules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(obj)
+        });
+
+        if (!res.ok) throw new Error(`Server error ${res.status}`);
+
+        showStatus('✅ Rule saved! Check /alerts to see triggered rules', 'success');
+        clearForm();
+      } catch (e) {
+        showStatus('❌ Save failed: ' + e.message, 'error');
+      }
+    }
+
+    function clearForm() {
+      document.getElementById('ruleName').value = '';
+      document.getElementById('searchPattern').value = '';
+      document.getElementById('ruleDescription').value = '';
+      document.getElementById('ruleTags').value = '';
+      document.getElementById('ruleSeverity').value = 'medium';
+      showStatus('', '');
+    }
+
+    function loadExample(type) {
+      const examples = {
+        powershell: {
+          name: 'Suspicious PowerShell Activity',
+          pattern: '.*powershell.*',
+          severity: 'high',
+          description: 'Detects any PowerShell execution in logs',
+          tags: 'powershell,execution'
+        },
+        cmd: {
+          name: 'Command Execution Detection',
+          pattern: '.*cmd\\.exe.*|.*command.*',
+          severity: 'high',
+          description: 'Detects cmd.exe or command execution',
+          tags: 'cmd,execution'
+        },
+        malware: {
+          name: 'Malware Keywords',
+          pattern: '.*malware.*|.*virus.*|.*trojan.*',
+          severity: 'critical',
+          description: 'Detects malware-related keywords',
+          tags: 'malware,virus'
+        },
+        error: {
+          name: 'Error and Exception Detection',
+          pattern: '.*error.*|.*failed.*|.*exception.*',
+          severity: 'medium',
+          description: 'Detects errors and failed operations',
+          tags: 'error,exception'
+        },
+        network: {
+          name: 'Network Activity Detection',
+          pattern: '.*connection.*|.*network.*|.*port.*',
+          severity: 'medium',
+          description: 'Detects network-related activity',
+          tags: 'network,connection'
+        }
+      };
+
+      if (examples[type]) {
+        const ex = examples[type];
+        document.getElementById('ruleName').value = ex.name;
+        document.getElementById('searchPattern').value = ex.pattern;
+        document.getElementById('ruleSeverity').value = ex.severity;
+        document.getElementById('ruleDescription').value = ex.description;
+        document.getElementById('ruleTags').value = ex.tags;
+        showStatus('✅ Example loaded. Click "Generate Rule" to create', 'success');
+      }
+    }
+
+    function showStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = type;
+    }
+  </script>
+</body>
+</html>

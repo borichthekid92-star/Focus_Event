@@ -1,0 +1,4 @@
+DB cleaning, make sure the database can contain 30 days of data 
+Create dropped events
+keylogger module 
+screenrecording and terminal access 

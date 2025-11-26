@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create Detection Rule</title>
+  <style>
+    body { font-family: monospace; background: #0f1520; color: #e6edf3; margin: 0; padding: 20px; }
+    h1 { color: #57a8ff; }
+    textarea {
+      width: 100%; height: 400px;
+      background: #131a29; color: #e6edf3;
+      border: 1px solid #22314a; border-radius: 6px;
+      padding: 10px; font-size: 14px;
+    }
+    .btn { padding: 10px 16px; margin-top: 10px; border: none; border-radius: 6px; cursor: pointer; }
+    .btn.primary { background: #57a8ff; color: #000; }
+    .btn.danger { background: #ff6b6b; color: #000; }
+    #status { margin-top: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Rule Authoring Notepad</h1>
+  <p>Paste or edit your JSON rule below. Use regex for detection fields.</p>
+  <textarea id="rule-json">{
+  "id": "uuid-string",
+  "name": "Example Rule",
+  "severity": "medium",
+  "tags": ["demo"],
+  "description": "Detects suspicious process",
+  "version": 1,
+  "created_at": "2025-10-30T01:30:00Z",
+  "updated_at": "2025-10-30T01:30:00Z",
+  "detection": {
+    "process_name": ".*",
+    "command_line": ".*",
+    "username": ".*",
+    "window_title": ".*",
+    "ip_address": ".*",
+    "flags": "i"
+  },
+  "meta": { "enabled": true, "hit_count": 0 }
+}</textarea>
+  <br>
+  <button class="btn primary" onclick="validateRule()">Validate JSON</button>
+  <button class="btn danger" onclick="saveRule()">Save Rule</button>
+  <div id="status"></div>
+
+  <script>
+    function validateRule() {
+      const text = document.getElementById('rule-json').value;
+      try {
+        const obj = JSON.parse(text);
+        if (!obj.name || !obj.detection) throw new Error("Missing required fields");
+        document.getElementById('status').innerText = "✅ JSON is valid";
+        document.getElementById('status').style.color = "#5bd17c";
+      } catch (e) {
+        document.getElementById('status').innerText = "❌ Invalid JSON: " + e.message;
+        document.getElementById('status').style.color = "#ff6b6b";
+      }
+    }
+
+    async function saveRule() {
+      const text = document.getElementById('rule-json').value;
+      try {
+        const obj = JSON.parse(text);
+        const res = await fetch('/api/rules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(obj)
+        });
+        if (!res.ok) throw new Error("Server error " + res.status);
+        document.getElementById('status').innerText = "✅ Rule saved successfully";
+        document.getElementById('status').style.color = "#5bd17c";
+      } catch (e) {
+        document.getElementById('status').innerText = "❌ Save failed: " + e.message;
+        document.getElementById('status').style.color = "#ff6b6b";
+      }
+    }
+  </script>
+</body>
+</html>

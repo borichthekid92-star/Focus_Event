@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>EDR Detection Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Minimal styling; swap to Bootstrap if desired -->
+  <style>
+    :root {
+      --bg: #0f1520;
+      --panel: #131a29;
+      --text: #e6edf3;
+      --muted: #8b9bb4;
+      --accent: #57a8ff;
+      --danger: #ff6b6b;
+      --success: #5bd17c;
+      --warn: #f3b548;
+      --border: #22314a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, sans-serif; color: var(--text);
+      background: linear-gradient(180deg, #0b1220, var(--bg));
+      min-height: 100vh;
+    }
+    header {
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      background: #0b1220; position: sticky; top: 0; z-index: 50;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: 0.2px; }
+    header .status {
+      display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted);
+    }
+    .container {
+      display: grid; grid-template-columns: 380px 1fr; gap: 16px; padding: 16px;
+      height: calc(100vh - 60px); /* Account for header height */
+    }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .panel header {
+      background: transparent; border-bottom: 1px solid var(--border); position: static; padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel header h2 { margin: 0; font-size: 14px; font-weight: 600; }
+    .panel .content {
+      padding: 12px 16px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 6px; }
+    input[type="text"], textarea, select {
+      width: 100%; background: #0f1628; border: 1px solid var(--border); color: var(--text);
+      padding: 8px 10px; border-radius: 8px; font-size: 13px;
+    }
+    textarea { min-height: 70px; resize: vertical; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border);
+      background: #132038; color: var(--text); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px;
+      transition: opacity 0.2s;
+    }
+    .btn:not(:disabled):hover {
+      opacity: 0.8;
+    }
+    .btn.primary { background: #173055; border-color: #21406b; color: #dbe9ff; }
+    .btn.danger { background: #3a1820; border-color: #5d2430; color: #ffd6db; }
+    .btn.warn { background: #3a2a15; border-color: #664a24; color: #ffe7c6; }
+    .btn.success { background: #143424; border-color: #1d4a33; color: #d4fff0; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .list { display: grid; gap: 8px; }
+    .item {
+      border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: #0f1628;
+    }
+    .item .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .item .name { font-weight: 600; font-size: 13px; }
+    .item .meta { color: var(--muted); font-size: 12px; }
+    .tag {
+      display: inline-block; padding: 2px 6px; border-radius: 999px; font-size: 11px;
+      border: 1px solid var(--border);
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+    .tag.success { border-color: #1d4a33; color: #8adbbf; }
+    .tag.warn { border-color: #664a24; color: #f7c87b; }
+    .tag.danger { border-color: #5d2430; color: #ff9aaa; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .small { font-size: 12px; color: var(--muted); }
+    pre {
+      background: #0b1220; color: #cfe3ff; border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px; overflow: auto; font-size: 12px; max-height: 240px;
+    }
+    .feed {
+      display: grid; gap: 8px;
+      max-height: calc(100% - 100px); /* Account for filters and metrics */
+      overflow-y: auto;
+    }
+    .event {
+      border: 1px solid var(--border); border-radius: 8px; padding: 10px;
+      background: #0f1628;
+      word-break: break-all;
+    }
+    .event .line { display: grid; grid-template-columns: 160px 1fr; gap: 8px; font-size: 12px; }
+    .event .line .label { color: var(--muted); }
+    .match { border-left: 3px solid var(--success); }
+    .no-match { border-left: 3px solid transparent; }
+    .danger-text { color: var(--danger); }
+    .success-text { color: var(--success); }
+    .muted { color: var(--muted); }
+    .footer {
+      padding: 12px 16px; border-top: 1px solid var(--border);
+      display: flex; gap: 8px; align-items: center;
+      margin-top: auto;
+    }
+    dialog {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      color: var(--text);
+    }
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>EDR Detection Dashboard</h1>
+    <div class="status">
+      <span id="conn-status">Event stream: disconnected</span>
+      <span>•</span>
+      <span id="rule-count">0 rules</span>
+      <span>•</span>
+      <span id="hit-count">0 hits</span>
+    </div>
+  </header>
+  <div class="container">
+    <!-- Left: Rule authoring -->
+    <section class="panel" id="rule-panel">
+      <header>
+        <h2>Detection rules</h2>
+        <div>
+          <button class="btn warn" id="export-rules">Export</button>
+          <button class="btn success" id="import-rules">Import</button>
+        </div>
+      </header>
+      <div class="content">
+        <div class="row">
+          <div>
+            <label>Rule name</label>
+            <input type="text" id="rule-name" placeholder="e.g., Suspicious PowerShell Base64" />
+          </div>
+          <div>
+            <label>Severity</label>
+            <select id="rule-severity">
+              <option value="low">low</option>
+              <option value="medium" selected>medium</option>
+              <option value="high">high</option>
+              <option value="critical">critical</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Process name regex</label>
+            <input type="text" id="rule-proc" placeholder="e.g., ^(powershell|pwsh)\.exe$" />
+          </div>
+          <div>
+            <label>Command line regex</label>
+            <input type="text" id="rule-cmd" placeholder="e.g., -enc[\\s=]+[A-Za-z0-9+/=]{20,}" />
+          </div>
+        </div>
+        <div>
+          <label>Tags (comma separated)</label>
+          <input type="text" id="rule-tags" placeholder="e.g., T1059.001, powershell, encoded" />
+        </div>
+        <div>
+          <label>Description</label>
+          <textarea id="rule-desc" placeholder="What does this rule catch and why?" ></textarea>
+        </div>
+        <div class="row">
+          <div>
+            <label>Test: process name</label>
+            <input type="text" id="test-proc" placeholder="e.g., powershell.exe" />
+          </div>
+          <div>
+            <label>Test: command line</label>
+            <input type="text" id="test-cmd" placeholder='e.g., powershell.exe -enc "..."' />
+          </div>
+        </div>
+        <div class="footer">
+          <button class="btn" id="regex-test">Test regex</button>
+          <span id="regex-status" class="small muted">No test yet</span>
+          <div style="flex:1"></div>
+          <button class="btn primary" id="save-rule">Save rule</button>
+        </div>
+        <div class="list" id="rule-list"></div>
+      </div>
+    </section>
+    <!-- Right: Live events + matches -->
+    <section class="panel">
+      <header>
+        <h2>Live process events</h2>
+        <div>
+          <button class="btn" id="connect">Connect</button>
+          <button class="btn danger" id="disconnect" disabled>Disconnect</button>
+        </div>
+      </header>
+      <div class="content">
+        <div class="row">
+          <div>
+            <label>Filter: search text</label>
+            <input type="text" id="feed-filter" placeholder="filters process name or cmdline" />
+          </div>
+          <div>
+            <label>Show only matches</label>
+            <select id="show-only-matches">
+              <option value="no" selected>no</option>
+              <option value="yes">yes</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="item">
+            <div class="top">
+              <div class="name">Events received</div>
+            </div>
+            <div class="meta"><span id="metrics-events">0</span></div>
+          </div>
+          <div class="item">
+            <div class="top">
+              <div class="name">Matches</div>
+            </div>
+            <div class="meta"><span id="metrics-matches">0</span></div>
+          </div>
+          <div class="item">
+            <div class="top">
+              <div class="name">Drops (invalid)</div>
+            </div>
+            <div class="meta"><span id="metrics-drops">0</span></div>
+          </div>
+        </div>
+        <div class="feed" id="event-feed"></div>
+      </div>
+    </section>
+  </div>
+  <!-- JSON export/import modal (minimal) -->
+  <dialog id="json-dialog">
+    <form method="dialog" style="min-width: 60vw;">
+      <h3 style="margin-top:0;">Rules JSON</h3>
+      <p class="small muted">You can copy, edit, and paste back to import.</p>
+      <textarea id="json-area" style="width: 100%; height: 300px; background: #0f1628; border: 1px solid var(--border); color: var(--text);"></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="btn" value="cancel">Close</button>
+        <button class="btn success" id="apply-json" value="default">Import</button>
+      </div>
+    </form>
+  </dialog>
+  <script>
+    // --- State ---
+    const state = {
+      rules: [],
+      hits: 0,
+      connected: false,
+      source: null,
+      metrics: { events: 0, matches: 0, drops: 0 },
+    };
+    // --- DOM refs ---
+    const ruleName = document.getElementById('rule-name');
+    const ruleSeverity = document.getElementById('rule-severity');
+    const ruleProc = document.getElementById('rule-proc');
+    const ruleCmd = document.getElementById('rule-cmd');
+    const ruleTags = document.getElementById('rule-tags');
+    const ruleDesc = document.getElementById('rule-desc');
+    const testProc = document.getElementById('test-proc');
+    const testCmd = document.getElementById('test-cmd');
+    const regexTestBtn = document.getElementById('regex-test');
+    const regexStatus = document.getElementById('regex-status');
+    const saveRuleBtn = document.getElementById('save-rule');
+    const ruleList = document.getElementById('rule-list');
+    const connectBtn = document.getElementById('connect');
+    const disconnectBtn = document.getElementById('disconnect');
+    const eventFeed = document.getElementById('event-feed');
+    const feedFilter = document.getElementById('feed-filter');
+    const showOnlyMatches = document.getElementById('show-only-matches');
+    const connStatus = document.getElementById('conn-status');
+    const ruleCount = document.getElementById('rule-count');
+    const hitCount = document.getElementById('hit-count');
+    const metricsEvents = document.getElementById('metrics-events');
+    const metricsMatches = document.getElementById('metrics-matches');
+    const metricsDrops = document.getElementById('metrics-drops');
+    const jsonDialog = document.getElementById('json-dialog');
+    const jsonArea = document.getElementById('json-area');
+    const exportRulesBtn = document.getElementById('export-rules');
+    const importRulesBtn = document.getElementById('import-rules');
+    const applyJsonBtn = document.getElementById('apply-json');
+
+    // --- Utilities ---
+    async function loadRules() {
+      try {
+        const res = await fetch('/api/rules');
+        if (!res.ok) throw new Error('Failed to load rules');
+        state.rules = await res.json();
+        // Initialize meta properties if they don't exist
+        state.rules.forEach(rule => {
+          if (!rule.meta) {
+            rule.meta = { enabled: true, hit_count: 0 };
+          }
+          if (!rule.detection) {
+            rule.detection = {
+              process_name: rule.process_name || '.*',
+              command_line: rule.command_line || '.*',
+              flags: 'i'
+            };
+          }
+        });
+      } catch (e) {
+        console.error('Error loading rules:', e);
+        alert('Error loading rules: ' + e.message);
+        state.rules = [];
+      }
+    }
+
+    async function saveRule(rule) {
+      try {
+        const ruleToSave = {
+          name: rule.name,
+          severity: rule.severity,
+          detection: {
+            process_name: rule.process_name || '.*',
+            command_line: rule.command_line || '.*',
+            flags: 'i'
+          },
+          tags: rule.tags ? rule.tags.split(',').map(t => t.trim()).filter(t => t) : [],
+          description: rule.description,
+          meta: {
+            enabled: true,
+            hit_count: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        };
+
+        const res = await fetch('/api/rules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ruleToSave)
+        });
+
+        if (!res.ok) throw new Error('Failed to save rule');
+        await loadRules(); // Reload after save
+      } catch (e) {
+        console.error('Error saving rule:', e);
+        alert('Error saving rule: ' + e.message);
+      }
+    }
+
+    async function updateRule(id, updates) {
+      try {
+        const res = await fetch(`/api/rules/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates)
+        });
+        if (!res.ok) throw new Error('Failed to update rule');
+        await loadRules(); // Reload after update
+      } catch (e) {
+        console.error('Error updating rule:', e);
+        alert('Error updating rule: ' + e.message);
+      }
+    }
+
+    async function deleteRule(id) {
+      try {
+        const res = await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Failed to delete rule');
+        await loadRules(); // Reload after delete
+      } catch (e) {
+        console.error('Error deleting rule:', e);
+        alert('Error deleting rule: ' + e.message);
+      }
+    }
+
+    function updateHeader() {
+      ruleCount.textContent = `${state.rules.length} rules`;
+      hitCount.textContent = `${state.hits} hits`;
+      connStatus.textContent = `Event stream: ${state.connected ? 'connected' : 'disconnected'}`;
+      metricsEvents.textContent = state.metrics.events;
+      metricsMatches.textContent = state.metrics.matches;
+      metricsDrops.textContent = state.metrics.drops;
+    }
+
+    function tryCompile(pattern, flags='i') {
+      try {
+        return [new RegExp(pattern, flags), null];
+      } catch (e) {
+        return [null, e.message];
+      }
+    }
+
+    function renderRules() {
+      ruleList.innerHTML = '';
+      for (const r of state.rules) {
+        const item = document.createElement('div');
+        item.className = 'item';
+        item.innerHTML = `
+          <div class="top">
+            <div>
+              <div class="name">${escapeHtml(r.name)}</div>
+              <div class="meta small">${escapeHtml(r.description || '')}</div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span class="tag ${tagClass(r.severity)}">${r.severity}</span>
+              <button class="btn" data-id="${r.id}" data-action="toggle">${r.meta?.enabled ? 'Disable' : 'Enable'}</button>
+              <button class="btn warn" data-id="${r.id}" data-action="edit">Edit</button>
+              <button class="btn danger" data-id="${r.id}" data-action="delete">Delete</button>
+            </div>
+          </div>
+          <div class="small muted" style="margin-top:6px;">
+            <strong>Process name:</strong> ${escapeHtml(r.detection?.process_name || '(any)')}
+            &nbsp;|&nbsp;
+            <strong>Command line:</strong> ${escapeHtml(r.detection?.command_line || '(any)')}
+            &nbsp;|&nbsp;
+            <strong>Flags:</strong> ${escapeHtml(r.detection?.flags || 'i')}
+            &nbsp;|&nbsp;
+            <strong>Hits:</strong> ${r.meta?.hit_count || 0}
+          </div>
+          <div style="margin-top:6px;">
+            ${r.tags?.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join(' ') || ''}
+          </div>
+        `;
+        ruleList.appendChild(item);
+      }
+      updateHeader();
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    function tagClass(sev) {
+      if (sev === 'critical' || sev === 'high') return 'danger';
+      if (sev === 'medium') return 'warn';
+      return 'success';
+    }
+
+    // --- Rule saving & testing ---
+    regexTestBtn.addEventListener('click', () => {
+      const [procRe, procErr] = tryCompile(ruleProc.value || '.*');
+      const [cmdRe, cmdErr] = tryCompile(ruleCmd.value || '.*');
+      const p = testProc.value || '';
+      const c = testCmd.value || '';
+
+      if (procErr || cmdErr) {
+        regexStatus.textContent = `Invalid regex: ${procErr || cmdErr}`;
+        regexStatus.className = 'small danger-text';
+        return;
+      }
+
+      const match = (procRe.test(p) && cmdRe.test(c));
+      regexStatus.textContent = match ? 'Test matched' : 'Test did not match';
+      regexStatus.className = match ? 'small success-text' : 'small muted';
+    });
+
+    saveRuleBtn.addEventListener('click', async () => {
+      const name = ruleName.value.trim();
+      if (!name) {
+        alert('Rule name is required');
+        return;
+      }
+
+      // Pre-compile to validate
+      const [procRe, procErr] = tryCompile(ruleProc.value || '.*');
+      const [cmdRe, cmdErr] = tryCompile(ruleCmd.value || '.*');
+      if (procErr || cmdErr) {
+        alert(`Invalid regex: ${procErr || cmdErr}`);
+        return;
+      }
+
+      const rule = {
+        name,
+        severity: ruleSeverity.value,
+        process_name: ruleProc.value,
+        command_line: ruleCmd.value,
+        tags: ruleTags.value,
+        description: ruleDesc.value
+      };
+
+      await saveRule(rule);
+      resetForm();
+      renderRules();
+    });
+
+    ruleList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-id]');
+      if (!btn) return;
+
+      const id = btn.getAttribute('data-id');
+      const action = btn.getAttribute('data-action');
+      const rule = state.rules.find(r => r.id === id);
+
+      if (!rule) return;
+
+      if (action === 'delete') {
+        if (confirm(`Delete rule "${rule.name}"?`)) {
+          await deleteRule(id);
+          renderRules();
+        }
+      } else if (action === 'toggle') {
+        const updates = {
+          ...rule,
+          meta: {
+            ...rule.meta,
+            enabled: !rule.meta?.enabled,
+            updated_at: new Date().toISOString()
+          }
+        };
+        await updateRule(id, updates);
+        renderRules();
+      } else if (action === 'edit') {
+        // Load into form for quick edit
+        ruleName.value = rule.name;
+        ruleSeverity.value = rule.severity;
+        ruleProc.value = rule.detection?.process_name || '';
+        ruleCmd.value = rule.detection?.command_line || '';
+        ruleTags.value = rule.tags?.join(', ') || '';
+        ruleDesc.value = rule.description || '';
+      }
+    });
+
+    function resetForm() {
+      ruleName.value = '';
+      ruleSeverity.value = 'medium';
+      ruleProc.value = '';
+      ruleCmd.value = '';
+      ruleTags.value = '';
+      ruleDesc.value = '';
+      testProc.value = '';
+      testCmd.value = '';
+      regexStatus.textContent = 'No test yet';
+      regexStatus.className = 'small muted';
+    }
+
+    // --- Export / Import ---
+    exportRulesBtn.addEventListener('click', async () => {
+      await loadRules();
+      jsonArea.value = JSON.stringify(state.rules, null, 2);
+      jsonDialog.showModal();
+    });
+
+    importRulesBtn.addEventListener('click', () => {
+      jsonArea.value = JSON.stringify(state.rules, null, 2);
+      jsonDialog.showModal();
+    });
+
+    applyJsonBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      try {
+        const incoming = JSON.parse(jsonArea.value);
+        if (!Array.isArray(incoming)) throw new Error('JSON must be an array of rules');
+
+        // Minimal schema check
+        for (const r of incoming) {
+          if (!r.name || !r.detection) throw new Error('Each rule needs name and detection');
+        }
+
+        for (const rule of incoming) {
+          await saveRule(rule);
+        }
+
+        await loadRules();
+        renderRules();
+        jsonDialog.close();
+      } catch (err) {
+        console.error('Import failed:', err);
+        alert('Import failed: ' + err.message);
+      }
+    });
+
+    // --- Event stream handling ---
+    connectBtn.addEventListener('click', () => {
+      if (state.connected) return;
+
+      state.source = new EventSource('/events/process');
+      state.connected = true;
+      connectBtn.disabled = true;
+      disconnectBtn.disabled = false;
+      updateHeader();
+
+      state.source.onmessage = (ev) => {
+        try {
+          const data = JSON.parse(ev.data);
+          handleEvent(data);
+        } catch (e) {
+          console.error('Error parsing event:', e);
+          state.metrics.drops++;
+          updateHeader();
+        }
+      };
+
+      state.source.onerror = () => {
+        disconnectStream();
+      };
+    });
+
+    disconnectBtn.addEventListener('click', () => disconnectStream());
+
+    function disconnectStream() {
+      if (state.source) {
+        state.source.close();
+      }
+      state.source = null;
+      state.connected = false;
+      connectBtn.disabled = false;
+      disconnectBtn.disabled = true;
+      updateHeader();
+    }
+
+    // --- Event processing & matching ---
+    feedFilter.addEventListener('input', renderFeed);
+    showOnlyMatches.addEventListener('change', renderFeed);
+
+    const buffer = []; // recent events
+    const MAX_EVENTS = 300;
+
+    function handleEvent(evt) {
+      // Expected event schema from backend
+      // {
+      //   pid, ppid, process_name, command_line, path, username, timestamp
+      // }
+      state.metrics.events++;
+      const matchInfo = evaluateRules(evt);
+      evt._match = matchInfo;
+
+      buffer.unshift({
+        ...evt,
+        _match: matchInfo
+      });
+
+      if (buffer.length > MAX_EVENTS) buffer.pop();
+      renderFeed();
+      updateHeader();
+    }
+
+    function evaluateRules(evt) {
+      let matched = false;
+      let matchedRules = [];
+
+      for (const r of state.rules) {
+        if (!r.meta?.enabled) continue;
+
+        const flags = r.detection?.flags || 'i';
+        const [procRe] = tryCompile(r.detection?.process_name || '.*', flags);
+        const [cmdRe] = tryCompile(r.detection?.command_line || '.*', flags);
+
+        if (!procRe || !cmdRe) continue;
+
+        const pn = evt.process_name || '';
+        const cl = evt.command_line || '';
+
+        const ok = procRe.test(pn) && cmdRe.test(cl);
+
+        if (ok) {
+          matched = true;
+          matchedRules.push({
+            id: r.id,
+            name: r.name,
+            severity: r.severity
+          });
+
+          // Update hit count in our local state
+          const ruleIndex = state.rules.findIndex(rule => rule.id === r.id);
+          if (ruleIndex >= 0) {
+            state.rules[ruleIndex].meta = {
+              ...state.rules[ruleIndex].meta,
+              hit_count: (state.rules[ruleIndex].meta?.hit_count || 0) + 1
+            };
+          }
+
+          state.hits++;
+          state.metrics.matches++;
+        }
+      }
+
+      return matched ? matchedRules : null;
+    }
+
+    function renderFeed() {
+      const q = (feedFilter.value || '').toLowerCase();
+      const onlyMatches = (showOnlyMatches.value === 'yes');
+
+      eventFeed.innerHTML = '';
+
+      for (const evt of buffer) {
+        const text = (evt.process_name + ' ' + (evt.command_line || '')).toLowerCase();
+        const passesFilter = !q || text.includes(q);
+        const isMatch = !!evt._match;
+
+        if (!passesFilter) continue;
+        if (onlyMatches && !isMatch) continue;
+
+        const item = document.createElement('div');
+        item.className = 'event ' + (isMatch ? 'match' : 'no-match');
+
+        item.innerHTML = `
+          <div class="line"><div class="label">Time</div><div>${escapeHtml(evt.timestamp || '')}</div></div>
+          <div class="line"><div class="label">Process</div><div>${escapeHtml(evt.process_name || '')}</div></div>
+          <div class="line"><div class="label">PID / PPID</div><div>${escapeHtml(evt.pid || '')} / ${escapeHtml(evt.ppid || '')}</div></div>
+          <div class="line"><div class="label">Path</div><div>${escapeHtml(evt.path || '')}</div></div>
+          <div class="line"><div class="label">User</div><div>${escapeHtml(evt.username || '')}</div></div>
+          <div class="line"><div class="label">Command line</div><div>${escapeHtml(evt.command_line || '')}</div></div>
+          ${isMatch ? `<div class="line"><div class="label">Matched rules</div><div>${evt._match.map(m => `<span class="tag ${tagClass(m.severity)}">${escapeHtml(m.name)}</span>`).join(' ')}</div></div>` : ''}
+        `;
+
+        eventFeed.appendChild(item);
+      }
+    }
+
+    // Initial load
+    (async () => {
+      await loadRules();
+      renderRules();
+      updateHeader();
+    })();
+  </script>
+</body>
+</html>

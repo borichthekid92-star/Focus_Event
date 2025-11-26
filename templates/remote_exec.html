@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Falcon EDR – Remote Command Execution</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <style>
+        body {
+            background-color: #0e1117;
+            color: #d1d5db;
+            font-family: "Segoe UI", sans-serif;
+        }
+        h2 {
+            color: #00bcd4;
+            font-weight: 600;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .back-btn {
+            background-color: #1f2937;
+            color: #00bcd4;
+            border: 1px solid #00bcd4;
+            padding: 6px 14px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+        .back-btn:hover {
+            background-color: #00bcd4;
+            color: #0e1117;
+        }
+        .card {
+            background-color: #1a1f29;
+            border: 1px solid #2c303a;
+            box-shadow: 0 0 10px rgba(0, 188, 212, 0.1);
+        }
+        .list-group-item {
+            background-color: #161a21;
+            border: none;
+            color: #d1d5db;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .list-group-item:hover {
+            background-color: #232a36;
+        }
+        .list-group-item.active {
+            background-color: #00bcd4 !important;
+            color: #fff;
+        }
+        .quick-btn {
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            background-color: #1f2937;
+            border: 1px solid #00bcd4;
+            color: #00bcd4;
+            transition: all 0.2s ease;
+        }
+        .quick-btn:hover {
+            background-color: #00bcd4;
+            color: #0e1117;
+        }
+        pre {
+            background-color: #000;
+            color: #00ff99;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            height: 300px;
+            overflow-y: auto;
+        }
+        .spinner {
+            display: none;
+            text-align: center;
+            color: #00bcd4;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid mt-4">
+    <div class="top-bar">
+        <h2>⚡ Remote Command Execution</h2>
+        <a href="/" class="back-btn">← Back to Dashboard</a>
+    </div>
+
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="card mb-3">
+                <div class="card-header bg-dark text-info fw-semibold">
+                    Connected Endpoints
+                </div>
+                <ul id="endpointList" class="list-group list-group-flush"></ul>
+            </div>
+        </div>
+
+        <!-- Main Panel -->
+        <div class="col-md-9">
+            <div id="noEndpointAlert" class="alert alert-warning">Select an endpoint to begin.</div>
+            <div id="endpointInfoAlert" class="alert alert-info d-none">
+                Selected: <strong id="selectedEndpointName"></strong>
+                <span class="text-muted">(<span id="selectedEndpointStatus"></span>)</span>
+            </div>
+
+            <!-- Quick Commands -->
+            <div class="mt-3">
+                <button class="btn quick-btn" onclick="runQuickCommand('shutdown /s /f /t 0')">🛑 Force Shutdown</button>
+                <button class="btn quick-btn" onclick="runQuickCommand('net users')">👥 Net Users</button>
+                <button class="btn quick-btn" onclick="runQuickCommand('ipconfig /all')">🌐 IP Config</button>
+                <button class="btn quick-btn" onclick="runQuickCommand('tracert google.com')">📡 Trace Google</button>
+            </div>
+
+            <!-- Custom Command Input -->
+            <div class="input-group mt-3">
+                <input id="commandInput" class="form-control bg-dark text-light border-secondary" placeholder="Enter custom command...">
+                <button class="btn btn-info" onclick="sendCommand()">Send</button>
+            </div>
+
+            <!-- Command Output -->
+            <div class="mt-3">
+                <h5 class="text-info">Command Output:</h5>
+                <pre id="commandOutput">[ No output yet ]</pre>
+                <div class="spinner" id="spinner">⏳ Waiting for response...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedEndpointId = null;
+let selectedEndpointInfo = null;
+
+function loadEndpoints() {
+    fetch('/api/endpoints/list')
+        .then(r => r.json())
+        .then(data => {
+            const list = document.getElementById('endpointList');
+            list.innerHTML = '';
+            if (!data.success) return;
+
+            data.endpoints.forEach(ep => {
+                const li = document.createElement('li');
+                li.className = `list-group-item ${ep.id === selectedEndpointId ? 'active' : ''}`;
+                const dot = ep.status === 'online' ? '🟢' : '🔴';
+                li.innerHTML = `${dot} <strong>${ep.hostname}</strong><br><small>${ep.ip_address}</small>`;
+                li.onclick = (event) => selectEndpoint(event, ep.id, ep);
+                list.appendChild(li);
+            });
+        });
+}
+
+function selectEndpoint(event, endpointId, endpointInfo) {
+    selectedEndpointId = endpointId;
+    selectedEndpointInfo = endpointInfo;
+
+    document.querySelectorAll('.list-group-item').forEach(item => item.classList.remove('active'));
+    if (event && event.currentTarget) event.currentTarget.classList.add('active');
+
+    document.getElementById('noEndpointAlert').classList.add('d-none');
+    const infoAlert = document.getElementById('endpointInfoAlert');
+    infoAlert.classList.remove('d-none');
+    document.getElementById('selectedEndpointName').textContent = endpointInfo.hostname;
+    document.getElementById('selectedEndpointStatus').textContent = `${endpointInfo.status} | ${endpointInfo.ip_address}`;
+}
+
+function runQuickCommand(cmd) {
+    document.getElementById('commandInput').value = cmd;
+    sendCommand();
+}
+
+function sendCommand() {
+    const cmd = document.getElementById('commandInput').value.trim();
+    if (!selectedEndpointId) return alert('Select an endpoint first.');
+    if (!cmd) return;
+
+    document.getElementById('spinner').style.display = 'block';
+    document.getElementById('commandOutput').textContent = `> ${cmd}\n\n[Command queued...]`;
+
+    fetch('/api/execute-command', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ endpoint_id: selectedEndpointId, command: cmd })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) {
+            document.getElementById('spinner').style.display = 'none';
+            return alert(data.error || 'Command failed');
+        }
+        pollResult(data.command_id);
+    });
+}
+
+function pollResult(id) {
+    const interval = setInterval(() => {
+        fetch(`/api/command-result/${id}`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.status === 'completed') {
+                    clearInterval(interval);
+                    document.getElementById('spinner').style.display = 'none';
+                    document.getElementById('commandOutput').textContent = data.result || '[No output]';
+                }
+            });
+    }, 3000);
+}
+
+setInterval(loadEndpoints, 5000);
+loadEndpoints();
+</script>
+</body>
+</html>
